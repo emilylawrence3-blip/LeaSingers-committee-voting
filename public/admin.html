@@ -21,7 +21,7 @@
     .header h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
     .header p { opacity: 0.75; font-size: 0.85rem; }
     .container {
-      max-width: 500px;
+      max-width: 600px;
       margin: 0 auto;
       padding: 1.5rem 1rem;
     }
@@ -33,7 +33,8 @@
       margin-bottom: 1rem;
     }
     .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #2c3e50; }
-    .login-form input, .add-form input {
+    .card h3 { font-size: 1rem; margin-bottom: 0.8rem; color: #4a69bd; }
+    input[type="text"], input[type="password"], input[type="number"], select {
       width: 100%;
       padding: 0.8rem;
       border: 2px solid #e0e0e0;
@@ -41,7 +42,7 @@
       font-size: 1rem;
       margin-bottom: 0.8rem;
     }
-    .login-form input:focus, .add-form input:focus {
+    input:focus, select:focus {
       outline: none;
       border-color: #4a69bd;
     }
@@ -62,21 +63,23 @@
     .btn-danger:hover { background: #c0392b; }
     .btn-success { background: #27ae60; }
     .btn-success:hover { background: #219a52; }
+    .btn-warning { background: #f39c12; }
+    .btn-warning:hover { background: #e67e22; }
     .btn-sm {
       width: auto;
-      padding: 0.4rem 0.8rem;
-      font-size: 0.85rem;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.8rem;
       display: inline-block;
     }
     .nominee-list-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.7rem 0;
+      padding: 0.5rem 0;
       border-bottom: 1px solid #f0f0f0;
     }
     .nominee-list-item:last-child { border-bottom: none; }
-    .nominee-list-item .name { font-size: 1rem; }
+    .nominee-list-item .name { font-size: 0.95rem; }
     .toggle-row {
       display: flex;
       justify-content: space-between;
@@ -129,23 +132,73 @@
     .success-msg-text { color: #27ae60; font-size: 0.9rem; margin-bottom: 0.5rem; }
     .links { margin-top: 0.5rem; }
     .links a { color: #4a69bd; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-right: 1rem; }
-    .max-votes-input {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .hidden { display: none; }
+    .position-card {
+      border-left: 4px solid #4a69bd;
       margin-bottom: 1rem;
     }
-    .max-votes-input label { font-weight: 600; white-space: nowrap; }
-    .max-votes-input input {
-      width: 70px;
-      padding: 0.5rem;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      text-align: center;
+    .position-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
     }
-    .max-votes-input .hint { font-size: 0.75rem; color: #888; }
-    .hidden { display: none; }
+    .position-title h3 {
+      margin: 0;
+    }
+    .position-meta {
+      font-size: 0.75rem;
+      color: #888;
+      margin-bottom: 0.8rem;
+    }
+    .add-nominee-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .add-nominee-row input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .add-nominee-row button {
+      white-space: nowrap;
+    }
+    .winner-badge {
+      display: inline-block;
+      background: #27ae60;
+      color: white;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+      margin-left: 0.5rem;
+      font-weight: 600;
+    }
+    .winner-controls {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #f0f0f0;
+    }
+    .winner-controls label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #555;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+    .winner-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .winner-row select {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .section-divider {
+      border: none;
+      border-top: 2px solid #e8e8e8;
+      margin: 1.5rem 0;
+    }
   </style>
 </head>
 <body>
@@ -157,11 +210,9 @@
     <!-- Login -->
     <div id="login-section" class="card">
       <h2>Admin Login</h2>
-      <div class="login-form">
-        <input type="password" id="password-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()">
-        <button class="btn" onclick="login()">Log In</button>
-        <p id="login-error" class="error-msg hidden"></p>
-      </div>
+      <input type="password" id="password-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn" onclick="login()">Log In</button>
+      <p id="login-error" class="error-msg hidden"></p>
     </div>
 
     <!-- Admin content (hidden until login) -->
@@ -171,11 +222,7 @@
         <div class="stats">
           <div class="stat-box">
             <div class="number" id="voter-count">0</div>
-            <div class="label">Voters</div>
-          </div>
-          <div class="stat-box">
-            <div class="number" id="nominee-count">0</div>
-            <div class="label">Nominees</div>
+            <div class="label">Total Votes Cast</div>
           </div>
         </div>
         <div class="links">
@@ -194,37 +241,42 @@
             <span class="slider"></span>
           </div>
         </div>
-        <div class="max-votes-input">
-          <label>Max votes per person:</label>
-          <input type="number" id="max-votes-input" min="0" value="0" onchange="updateSettings()">
-          <span class="hint">(0 = unlimited)</span>
+        <div class="toggle-row">
+          <label>Results Visible to Public</label>
+          <div class="switch">
+            <input type="checkbox" id="results-toggle" onchange="updateSettings()">
+            <span class="slider"></span>
+          </div>
         </div>
       </div>
 
-      <!-- Add Nominee -->
+      <!-- Positions & Nominees -->
       <div class="card">
-        <h2>Add Nominee</h2>
-        <div class="add-form">
-          <input type="text" id="name-input" placeholder="Enter nominee's full name" onkeydown="if(event.key==='Enter')addNominee()">
-          <button class="btn btn-success" onclick="addNominee()">Add Nominee</button>
-          <p id="add-error" class="error-msg hidden"></p>
-          <p id="add-success" class="success-msg-text hidden"></p>
+        <h2>Positions &amp; Nominees</h2>
+        <p style="font-size:0.85rem; color:#888; margin-bottom:1rem;">
+          Add nominees against each position below. Once voting finishes for a position, declare a winner —
+          they will be automatically excluded from nominees for all remaining positions.
+        </p>
+        <div id="positions-list">
+          <p style="color:#888; text-align:center;">Loading...</p>
         </div>
-      </div>
 
-      <!-- Nominees list -->
-      <div class="card">
-        <h2>Current Nominees</h2>
-        <div id="nominees-list">
-          <p style="color:#888; text-align:center;">No nominees yet</p>
+        <hr class="section-divider">
+
+        <h3>Add a New Position</h3>
+        <input type="text" id="new-position-name" placeholder="Position name (e.g. Social Secretary)">
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.8rem;">
+          <label style="white-space:nowrap; font-size:0.9rem;">Winners:</label>
+          <input type="number" id="new-position-winners" min="1" value="1" style="width:80px; margin-bottom:0;">
         </div>
+        <button class="btn" onclick="addPosition()">Add Position</button>
       </div>
 
       <!-- Danger Zone -->
       <div class="card">
         <h2 style="color:#e74c3c">Danger Zone</h2>
-        <button class="btn btn-danger" onclick="resetVotes()">Reset All Votes</button>
-        <p style="font-size:0.8rem; color:#888; margin-top:0.5rem;">This will delete all recorded votes but keep the nominees.</p>
+        <button class="btn btn-danger" onclick="resetVotes()" style="margin-bottom:0.5rem;">Reset All Votes &amp; Winners</button>
+        <p style="font-size:0.8rem; color:#888;">This will delete all recorded votes and declared winners, but keep positions and nominees.</p>
       </div>
     </div>
   </div>
@@ -258,56 +310,116 @@
     }
 
     async function loadData() {
-      const [nomRes, statRes] = await Promise.all([
-        fetch("/api/nominees"),
+      const [posRes, statRes, settingsRes] = await Promise.all([
+        fetch("/api/admin/positions", { headers: headers() }),
         fetch("/api/admin/stats", { headers: headers() }),
+        fetch("/api/admin/settings", { headers: headers() }),
       ]);
-      const nomData = await nomRes.json();
+      const posData = await posRes.json();
       const statData = await statRes.json();
+      const settingsData = await settingsRes.json();
 
       document.getElementById("voter-count").textContent = statData.totalVoters;
-      document.getElementById("nominee-count").textContent = nomData.nominees.length;
-      document.getElementById("voting-toggle").checked = nomData.votingOpen;
-      document.getElementById("max-votes-input").value = nomData.maxVotes;
+      document.getElementById("voting-toggle").checked = settingsData.votingOpen;
+      document.getElementById("results-toggle").checked = settingsData.resultsPublic;
 
-      const list = document.getElementById("nominees-list");
-      if (nomData.nominees.length === 0) {
-        list.innerHTML = '<p style="color:#888; text-align:center;">No nominees yet</p>';
-      } else {
-        list.innerHTML = nomData.nominees
-          .map(
-            (n) => `
-          <div class="nominee-list-item">
-            <span class="name">${escapeHtml(n.name)}</span>
-            <button class="btn btn-danger btn-sm" onclick="removeNominee(${n.id})">Remove</button>
-          </div>`
-          )
-          .join("");
+      // Get winners
+      const winnersRes = await fetch(`/api/results?password=${encodeURIComponent(adminPassword)}`);
+      let winnersData = { results: [] };
+      if (winnersRes.ok) {
+        winnersData = await winnersRes.json();
       }
+
+      renderPositions(posData.positions, winnersData.results);
     }
 
-    async function addNominee() {
-      const input = document.getElementById("name-input");
+    function renderPositions(positions, resultsData) {
+      const list = document.getElementById("positions-list");
+      if (positions.length === 0) {
+        list.innerHTML = '<p style="color:#888; text-align:center;">No positions set up yet</p>';
+        return;
+      }
+
+      let html = "";
+      for (const pos of positions) {
+        const resultInfo = resultsData.find((r) => r.position.id === pos.id);
+        const posWinners = resultInfo ? resultInfo.winners : [];
+
+        html += `<div class="card position-card">`;
+        html += `<div class="position-title">`;
+        html += `<h3>${escapeHtml(pos.name)}</h3>`;
+        html += `<button class="btn btn-danger btn-sm" onclick="deletePosition(${pos.id})">Delete</button>`;
+        html += `</div>`;
+        html += `<div class="position-meta">Elects ${pos.max_winners} winner${pos.max_winners > 1 ? "s" : ""}</div>`;
+
+        // Show declared winners
+        if (posWinners.length > 0) {
+          for (const w of posWinners) {
+            html += `<div class="nominee-list-item">
+              <span class="name">${escapeHtml(w.nominee_name)}<span class="winner-badge">ELECTED</span></span>
+              <button class="btn btn-danger btn-sm" onclick="removeWinner(${w.id})">Remove</button>
+            </div>`;
+          }
+        }
+
+        // Nominees
+        if (pos.nominees.length > 0) {
+          for (const n of pos.nominees) {
+            const isWinner = posWinners.some((w) => w.nominee_name.toLowerCase() === n.name.toLowerCase());
+            html += `<div class="nominee-list-item">
+              <span class="name">${escapeHtml(n.name)}${isWinner ? '<span class="winner-badge">ELECTED</span>' : ""}</span>
+              <button class="btn btn-danger btn-sm" onclick="removeNominee(${n.id})">Remove</button>
+            </div>`;
+          }
+        } else {
+          html += '<p style="color:#aaa; font-size:0.85rem; padding:0.3rem 0;">No nominees yet</p>';
+        }
+
+        // Add nominee input
+        html += `<div class="add-nominee-row">
+          <input type="text" id="add-nom-${pos.id}" placeholder="Add nominee name" onkeydown="if(event.key==='Enter')addNominee(${pos.id})">
+          <button class="btn btn-success btn-sm" onclick="addNominee(${pos.id})">Add</button>
+        </div>`;
+
+        // Declare winner section
+        if (pos.nominees.length > 0) {
+          html += `<div class="winner-controls">
+            <label>Declare winner(s) for ${escapeHtml(pos.name)}:</label>
+            <div class="winner-row">
+              <select id="winner-select-${pos.id}">
+                <option value="">-- Select nominee --</option>`;
+          for (const n of pos.nominees) {
+            const alreadyWinner = posWinners.some((w) => w.nominee_name.toLowerCase() === n.name.toLowerCase());
+            if (!alreadyWinner) {
+              html += `<option value="${escapeHtml(n.name)}">${escapeHtml(n.name)}</option>`;
+            }
+          }
+          html += `</select>
+              <button class="btn btn-warning btn-sm" onclick="declareWinner(${pos.id})">Declare</button>
+            </div>
+          </div>`;
+        }
+
+        html += `</div>`;
+      }
+      list.innerHTML = html;
+    }
+
+    async function addNominee(positionId) {
+      const input = document.getElementById(`add-nom-${positionId}`);
       const name = input.value.trim();
       if (!name) return;
 
       const res = await fetch("/api/admin/nominees", {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, positionId }),
       });
       const data = await res.json();
-
       if (!res.ok) {
-        document.getElementById("add-error").textContent = data.error;
-        document.getElementById("add-error").classList.remove("hidden");
-        document.getElementById("add-success").classList.add("hidden");
+        alert(data.error);
         return;
       }
-
-      document.getElementById("add-error").classList.add("hidden");
-      document.getElementById("add-success").textContent = `${name} added!`;
-      document.getElementById("add-success").classList.remove("hidden");
       input.value = "";
       loadData();
     }
@@ -321,19 +433,75 @@
       loadData();
     }
 
+    async function addPosition() {
+      const name = document.getElementById("new-position-name").value.trim();
+      const maxWinners = parseInt(document.getElementById("new-position-winners").value) || 1;
+      if (!name) return;
+
+      const res = await fetch("/api/admin/positions", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ name, maxWinners }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+        return;
+      }
+      document.getElementById("new-position-name").value = "";
+      document.getElementById("new-position-winners").value = "1";
+      loadData();
+    }
+
+    async function deletePosition(id) {
+      if (!confirm("Delete this position and all its nominees and votes?")) return;
+      await fetch(`/api/admin/positions/${id}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      loadData();
+    }
+
+    async function declareWinner(positionId) {
+      const select = document.getElementById(`winner-select-${positionId}`);
+      const nomineeName = select.value;
+      if (!nomineeName) return;
+
+      const res = await fetch("/api/admin/winners", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ positionId, nomineeName }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error);
+        return;
+      }
+      loadData();
+    }
+
+    async function removeWinner(id) {
+      if (!confirm("Remove this declared winner?")) return;
+      await fetch(`/api/admin/winners/${id}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      loadData();
+    }
+
     async function updateSettings() {
       const votingOpen = document.getElementById("voting-toggle").checked;
-      const maxVotes = parseInt(document.getElementById("max-votes-input").value) || 0;
+      const resultsPublic = document.getElementById("results-toggle").checked;
       await fetch("/api/admin/settings", {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ votingOpen, maxVotes }),
+        body: JSON.stringify({ votingOpen, resultsPublic }),
       });
     }
 
     async function resetVotes() {
-      if (!confirm("Are you sure you want to delete ALL votes? This cannot be undone.")) return;
-      if (!confirm("Really delete all votes?")) return;
+      if (!confirm("Delete ALL votes and declared winners? This cannot be undone.")) return;
+      if (!confirm("Really delete everything?")) return;
       await fetch("/api/admin/reset-votes", {
         method: "POST",
         headers: headers(),

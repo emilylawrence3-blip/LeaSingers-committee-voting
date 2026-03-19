@@ -1,7 +1,7 @@
 {
   "name": "lea-singers-voting",
-  "version": "1.0.0",
-  "description": "Anonymous committee voting for Lea Singers choir",
+  "version": "2.0.0",
+  "description": "LeaSingers Committee Voting - Multi-position questionnaire style",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

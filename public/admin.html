@@ -99,6 +99,7 @@
       width: 0;
       height: 0;
       position: absolute;
+      pointer-events: none;
     }
     .slider {
       position: absolute;
@@ -255,7 +256,7 @@
         <div class="toggle-row">
           <span>Voting Open</span>
           <div style="display:flex; align-items:center;">
-            <label class="switch">
+            <label class="switch" onclick="toggleSetting('voting')">
               <input type="checkbox" id="voting-toggle">
               <span class="slider"></span>
             </label>
@@ -265,7 +266,7 @@
         <div class="toggle-row">
           <span>Results Visible to Public</span>
           <div style="display:flex; align-items:center;">
-            <label class="switch">
+            <label class="switch" onclick="toggleSetting('results')">
               <input type="checkbox" id="results-toggle">
               <span class="slider"></span>
             </label>
@@ -352,9 +353,7 @@
       }
     }
 
-    // Wire up toggle event listeners (these persist, unlike onchange in HTML)
-    document.getElementById("voting-toggle").addEventListener("change", updateSettings);
-    document.getElementById("results-toggle").addEventListener("change", updateSettings);
+    let savingSettings = false;
 
     async function loadData() {
       const [posRes, statRes, settingsRes] = await Promise.all([
@@ -368,16 +367,10 @@
 
       document.getElementById("voter-count").textContent = statData.totalVoters;
 
-      // Update toggles without triggering change event
-      const votingToggle = document.getElementById("voting-toggle");
-      const resultsToggle = document.getElementById("results-toggle");
-      votingToggle.removeEventListener("change", updateSettings);
-      resultsToggle.removeEventListener("change", updateSettings);
-      votingToggle.checked = settingsData.votingOpen;
-      resultsToggle.checked = settingsData.resultsPublic;
+      // Update toggles
+      document.getElementById("voting-toggle").checked = settingsData.votingOpen;
+      document.getElementById("results-toggle").checked = settingsData.resultsPublic;
       updateStatusLabels();
-      votingToggle.addEventListener("change", updateSettings);
-      resultsToggle.addEventListener("change", updateSettings);
 
       // Get winners
       const winnersRes = await fetch(`/api/results?password=${encodeURIComponent(adminPassword)}`);
@@ -556,7 +549,13 @@
       loadData();
     }
 
-    async function updateSettings() {
+    async function toggleSetting(which) {
+      if (savingSettings) return;
+      savingSettings = true;
+
+      // Small delay to let the checkbox state update from the click
+      await new Promise(r => setTimeout(r, 50));
+
       const votingOpen = document.getElementById("voting-toggle").checked;
       const resultsPublic = document.getElementById("results-toggle").checked;
       const feedback = document.getElementById("settings-feedback");
@@ -574,8 +573,12 @@
           const data = await res.json();
           feedback.textContent = "Failed: " + (data.error || "Unknown error");
           feedback.style.color = "#e74c3c";
-          // Revert toggles
-          loadData();
+          // Revert toggles by re-fetching actual state
+          const sRes = await fetch("/api/admin/settings", { headers: headers() });
+          const sData = await sRes.json();
+          document.getElementById("voting-toggle").checked = sData.votingOpen;
+          document.getElementById("results-toggle").checked = sData.resultsPublic;
+          updateStatusLabels();
         } else {
           feedback.textContent = "Saved!";
           feedback.style.color = "#27ae60";
@@ -584,8 +587,8 @@
       } catch (err) {
         feedback.textContent = "Network error — could not save.";
         feedback.style.color = "#e74c3c";
-        loadData();
       }
+      savingSettings = false;
     }
 
     async function resetVotes() {

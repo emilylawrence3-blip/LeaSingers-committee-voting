@@ -61,6 +61,16 @@ if (posCount === 0) {
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Prevent browser caching of HTML pages so updates are always seen
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html') || req.path === '/' || req.path === '/admin' || req.path === '/results') {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 // Assign each visitor a unique anonymous token via cookie

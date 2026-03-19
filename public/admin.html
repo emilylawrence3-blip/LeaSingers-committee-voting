@@ -492,11 +492,22 @@
     async function updateSettings() {
       const votingOpen = document.getElementById("voting-toggle").checked;
       const resultsPublic = document.getElementById("results-toggle").checked;
-      await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ votingOpen, resultsPublic }),
-      });
+      try {
+        const res = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({ votingOpen, resultsPublic }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert("Failed to update settings: " + (data.error || "Unknown error"));
+          // Revert toggles to previous state
+          loadData();
+        }
+      } catch (err) {
+        alert("Network error — could not save settings. Please try again.");
+        loadData();
+      }
     }
 
     async function resetVotes() {

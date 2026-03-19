@@ -129,7 +129,10 @@ app.get("/api/positions", (req, res) => {
   });
 });
 
-// Cast a vote for a specific position
+// Cast vote(s) for a specific position
+// Accepts { nomineeIds: [1,2,3] } for multi-winner positions
+// or { nomineeIds: [5] } for single-winner
+// or { nomineeIds: [] } for "no vote"
 app.post("/api/vote/:positionId", (req, res) => {
   const votingOpen = db.prepare("SELECT value FROM settings WHERE key = 'voting_open'").get();
   if (votingOpen?.value !== "true") {
@@ -138,7 +141,7 @@ app.post("/api/vote/:positionId", (req, res) => {
 
   const token = getVoterToken(req, res);
   const positionId = parseInt(req.params.positionId);
-  const { nomineeId } = req.body; // null means "no vote"
+  const { nomineeIds } = req.body; // empty array means "no vote"
 
   // Check position exists
   const position = db.prepare("SELECT * FROM positions WHERE id = ?").get(positionId);
@@ -154,22 +157,37 @@ app.post("/api/vote/:positionId", (req, res) => {
     return res.status(403).json({ error: "You have already voted for this position" });
   }
 
-  // Validate nominee if not "no vote"
-  if (nomineeId !== null && nomineeId !== undefined) {
+  // Validate nominee IDs
+  if (!Array.isArray(nomineeIds)) {
+    return res.status(400).json({ error: "nomineeIds must be an array" });
+  }
+
+  if (nomineeIds.length > position.max_winners) {
+    return res.status(400).json({ error: `You can select up to ${position.max_winners} nominees` });
+  }
+
+  for (const nid of nomineeIds) {
     const nominee = db
       .prepare("SELECT * FROM nominees WHERE id = ? AND position_id = ?")
-      .get(nomineeId, positionId);
+      .get(nid, positionId);
     if (!nominee) {
       return res.status(400).json({ error: "Invalid nominee for this position" });
     }
   }
 
   try {
-    db.prepare("INSERT INTO votes (position_id, nominee_id, voter_token) VALUES (?, ?, ?)").run(
-      positionId,
-      nomineeId || null,
-      token
-    );
+    const insertVote = db.prepare("INSERT INTO votes (position_id, nominee_id, voter_token) VALUES (?, ?, ?)");
+    const castVotes = db.transaction(() => {
+      if (nomineeIds.length === 0) {
+        // "No vote" — record one row with null nominee
+        insertVote.run(positionId, null, token);
+      } else {
+        for (const nid of nomineeIds) {
+          insertVote.run(positionId, nid, token);
+        }
+      }
+    });
+    castVotes();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to record vote" });

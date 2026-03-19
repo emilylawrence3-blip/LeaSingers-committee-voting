@@ -413,50 +413,27 @@
       btn.textContent = "Submitting...";
 
       try {
+        // Build the array of nominee IDs to send in one request
+        let nomineeIds = [];
         if (selection === "none") {
-          // Submit a "no vote"
-          const res = await fetch(`/api/vote/${pos.id}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nomineeId: null }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showError(data.error);
-            btn.disabled = false;
-            btn.textContent = currentStep < positions.length - 1 ? "Next →" : "Submit Vote";
-            return;
-          }
+          nomineeIds = []; // empty array = "no vote"
         } else if (selection instanceof Set) {
-          // Multi-select: submit one vote per selected nominee
-          for (const nomineeId of selection) {
-            const res = await fetch(`/api/vote/${pos.id}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ nomineeId }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              showError(data.error);
-              btn.disabled = false;
-              btn.textContent = currentStep < positions.length - 1 ? "Next →" : "Submit Vote";
-              return;
-            }
-          }
+          nomineeIds = [...selection];
         } else {
-          // Single selection
-          const res = await fetch(`/api/vote/${pos.id}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nomineeId: selection }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showError(data.error);
-            btn.disabled = false;
-            btn.textContent = currentStep < positions.length - 1 ? "Next →" : "Submit Vote";
-            return;
-          }
+          nomineeIds = [selection];
+        }
+
+        const res = await fetch(`/api/vote/${pos.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nomineeIds }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error);
+          btn.disabled = false;
+          btn.textContent = currentStep < positions.length - 1 ? "Next →" : "Submit Vote";
+          return;
         }
 
         // Mark as voted

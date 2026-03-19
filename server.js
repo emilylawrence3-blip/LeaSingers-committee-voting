@@ -141,7 +141,25 @@ app.post("/api/vote/:positionId", (req, res) => {
 
   const token = getVoterToken(req, res);
   const positionId = parseInt(req.params.positionId);
-  const { nomineeIds } = req.body; // empty array means "no vote"
+
+  // Accept multiple formats:
+  //   { nomineeIds: [1,2,3] }  — array (preferred)
+  //   { nomineeIds: 5 }        — single number
+  //   { nomineeId: 5 }         — old single format
+  //   { nomineeId: null }      — old "no vote" format
+  //   { nomineeIds: [] }       — "no vote"
+  let nomineeIds;
+  if (Array.isArray(req.body.nomineeIds)) {
+    nomineeIds = req.body.nomineeIds;
+  } else if (typeof req.body.nomineeIds === "number") {
+    nomineeIds = [req.body.nomineeIds];
+  } else if (req.body.nomineeId !== undefined) {
+    nomineeIds = req.body.nomineeId != null ? [req.body.nomineeId] : [];
+  } else if (req.body.nomineeIds !== undefined && req.body.nomineeIds === null) {
+    nomineeIds = [];
+  } else {
+    nomineeIds = [];
+  }
 
   // Check position exists
   const position = db.prepare("SELECT * FROM positions WHERE id = ?").get(positionId);
@@ -155,11 +173,6 @@ app.post("/api/vote/:positionId", (req, res) => {
     .get(token, positionId);
   if (existing.count > 0) {
     return res.status(403).json({ error: "You have already voted for this position" });
-  }
-
-  // Validate nominee IDs
-  if (!Array.isArray(nomineeIds)) {
-    return res.status(400).json({ error: "nomineeIds must be an array" });
   }
 
   if (nomineeIds.length > position.max_winners) {

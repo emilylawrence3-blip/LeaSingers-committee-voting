@@ -1,0 +1,14 @@
+{
+  "name": "lea-singers-voting",
+  "version": "1.0.0",
+  "description": "Anonymous committee voting for Lea Singers choir",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.1"
+  }
+}

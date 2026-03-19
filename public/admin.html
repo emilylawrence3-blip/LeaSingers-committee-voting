@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Lea Singers Voting</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      color: white;
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+    .header h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .header p { opacity: 0.75; font-size: 0.85rem; }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #2c3e50; }
+    .login-form input, .add-form input {
+      width: 100%;
+      padding: 0.8rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+    }
+    .login-form input:focus, .add-form input:focus {
+      outline: none;
+      border-color: #4a69bd;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.8rem;
+      background: #4a69bd;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:hover { background: #3b5998; }
+    .btn-danger { background: #e74c3c; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-success { background: #27ae60; }
+    .btn-success:hover { background: #219a52; }
+    .btn-sm {
+      width: auto;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      display: inline-block;
+    }
+    .nominee-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .nominee-list-item:last-child { border-bottom: none; }
+    .nominee-list-item .name { font-size: 1rem; }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .toggle-row label { font-weight: 600; }
+    .switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      border-radius: 28px;
+      transition: .3s;
+    }
+    .slider:before {
+      content: "";
+      position: absolute;
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .3s;
+    }
+    .switch input:checked + .slider { background-color: #27ae60; }
+    .switch input:checked + .slider:before { transform: translateX(22px); }
+    .stats {
+      display: flex;
+      gap: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .stat-box {
+      flex: 1;
+      background: #f7f8fc;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .stat-box .number { font-size: 1.8rem; font-weight: 700; color: #4a69bd; }
+    .stat-box .label { font-size: 0.8rem; color: #888; }
+    .error-msg { color: #e74c3c; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .success-msg-text { color: #27ae60; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .links { margin-top: 0.5rem; }
+    .links a { color: #4a69bd; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-right: 1rem; }
+    .max-votes-input {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .max-votes-input label { font-weight: 600; white-space: nowrap; }
+    .max-votes-input input {
+      width: 70px;
+      padding: 0.5rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: center;
+    }
+    .max-votes-input .hint { font-size: 0.75rem; color: #888; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Admin Panel</h1>
+    <p>Lea Singers Committee Voting</p>
+  </div>
+  <div class="container">
+    <!-- Login -->
+    <div id="login-section" class="card">
+      <h2>Admin Login</h2>
+      <div class="login-form">
+        <input type="password" id="password-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()">
+        <button class="btn" onclick="login()">Log In</button>
+        <p id="login-error" class="error-msg hidden"></p>
+      </div>
+    </div>
+
+    <!-- Admin content (hidden until login) -->
+    <div id="admin-content" class="hidden">
+      <!-- Stats -->
+      <div class="card">
+        <div class="stats">
+          <div class="stat-box">
+            <div class="number" id="voter-count">0</div>
+            <div class="label">Voters</div>
+          </div>
+          <div class="stat-box">
+            <div class="number" id="nominee-count">0</div>
+            <div class="label">Nominees</div>
+          </div>
+        </div>
+        <div class="links">
+          <a href="/">Voting Page</a>
+          <a href="/results">Results Page</a>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="card">
+        <h2>Settings</h2>
+        <div class="toggle-row">
+          <label>Voting Open</label>
+          <div class="switch">
+            <input type="checkbox" id="voting-toggle" onchange="updateSettings()">
+            <span class="slider"></span>
+          </div>
+        </div>
+        <div class="max-votes-input">
+          <label>Max votes per person:</label>
+          <input type="number" id="max-votes-input" min="0" value="0" onchange="updateSettings()">
+          <span class="hint">(0 = unlimited)</span>
+        </div>
+      </div>
+
+      <!-- Add Nominee -->
+      <div class="card">
+        <h2>Add Nominee</h2>
+        <div class="add-form">
+          <input type="text" id="name-input" placeholder="Enter nominee's full name" onkeydown="if(event.key==='Enter')addNominee()">
+          <button class="btn btn-success" onclick="addNominee()">Add Nominee</button>
+          <p id="add-error" class="error-msg hidden"></p>
+          <p id="add-success" class="success-msg-text hidden"></p>
+        </div>
+      </div>
+
+      <!-- Nominees list -->
+      <div class="card">
+        <h2>Current Nominees</h2>
+        <div id="nominees-list">
+          <p style="color:#888; text-align:center;">No nominees yet</p>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="card">
+        <h2 style="color:#e74c3c">Danger Zone</h2>
+        <button class="btn btn-danger" onclick="resetVotes()">Reset All Votes</button>
+        <p style="font-size:0.8rem; color:#888; margin-top:0.5rem;">This will delete all recorded votes but keep the nominees.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let adminPassword = "";
+
+    function headers() {
+      return {
+        "Content-Type": "application/json",
+        "X-Admin-Password": adminPassword,
+      };
+    }
+
+    async function login() {
+      adminPassword = document.getElementById("password-input").value;
+      try {
+        const res = await fetch("/api/admin/stats", { headers: headers() });
+        if (!res.ok) {
+          document.getElementById("login-error").textContent = "Incorrect password";
+          document.getElementById("login-error").classList.remove("hidden");
+          return;
+        }
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("admin-content").classList.remove("hidden");
+        loadData();
+      } catch {
+        document.getElementById("login-error").textContent = "Connection error";
+        document.getElementById("login-error").classList.remove("hidden");
+      }
+    }
+
+    async function loadData() {
+      const [nomRes, statRes] = await Promise.all([
+        fetch("/api/nominees"),
+        fetch("/api/admin/stats", { headers: headers() }),
+      ]);
+      const nomData = await nomRes.json();
+      const statData = await statRes.json();
+
+      document.getElementById("voter-count").textContent = statData.totalVoters;
+      document.getElementById("nominee-count").textContent = nomData.nominees.length;
+      document.getElementById("voting-toggle").checked = nomData.votingOpen;
+      document.getElementById("max-votes-input").value = nomData.maxVotes;
+
+      const list = document.getElementById("nominees-list");
+      if (nomData.nominees.length === 0) {
+        list.innerHTML = '<p style="color:#888; text-align:center;">No nominees yet</p>';
+      } else {
+        list.innerHTML = nomData.nominees
+          .map(
+            (n) => `
+          <div class="nominee-list-item">
+            <span class="name">${escapeHtml(n.name)}</span>
+            <button class="btn btn-danger btn-sm" onclick="removeNominee(${n.id})">Remove</button>
+          </div>`
+          )
+          .join("");
+      }
+    }
+
+    async function addNominee() {
+      const input = document.getElementById("name-input");
+      const name = input.value.trim();
+      if (!name) return;
+
+      const res = await fetch("/api/admin/nominees", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById("add-error").textContent = data.error;
+        document.getElementById("add-error").classList.remove("hidden");
+        document.getElementById("add-success").classList.add("hidden");
+        return;
+      }
+
+      document.getElementById("add-error").classList.add("hidden");
+      document.getElementById("add-success").textContent = `${name} added!`;
+      document.getElementById("add-success").classList.remove("hidden");
+      input.value = "";
+      loadData();
+    }
+
+    async function removeNominee(id) {
+      if (!confirm("Remove this nominee? Their votes will also be deleted.")) return;
+      await fetch(`/api/admin/nominees/${id}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      loadData();
+    }
+
+    async function updateSettings() {
+      const votingOpen = document.getElementById("voting-toggle").checked;
+      const maxVotes = parseInt(document.getElementById("max-votes-input").value) || 0;
+      await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ votingOpen, maxVotes }),
+      });
+    }
+
+    async function resetVotes() {
+      if (!confirm("Are you sure you want to delete ALL votes? This cannot be undone.")) return;
+      if (!confirm("Really delete all votes?")) return;
+      await fetch("/api/admin/reset-votes", {
+        method: "POST",
+        headers: headers(),
+      });
+      loadData();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results - Lea Singers Voting</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #2c3e7b, #4a69bd);
+      color: white;
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+    .header h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
+    .header p { opacity: 0.85; font-size: 0.9rem; }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 1rem;
+    }
+    .total-voters {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+    .total-voters strong { color: #4a69bd; font-size: 1.3rem; }
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-height: 400px;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-row .rank {
+      width: 28px;
+      height: 28px;
+      background: #4a69bd;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    .result-row .rank.gold { background: #f1c40f; color: #333; }
+    .result-row .rank.silver { background: #95a5a6; }
+    .result-row .rank.bronze { background: #cd6133; }
+    .result-row .name { flex: 1; font-size: 1rem; }
+    .result-row .votes {
+      font-weight: 700;
+      color: #4a69bd;
+      font-size: 1.1rem;
+      min-width: 40px;
+      text-align: right;
+    }
+    .bar-bg {
+      flex: 1;
+      margin: 0 12px;
+      background: #f0f2f5;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4a69bd, #6a89dd);
+      border-radius: 6px;
+      transition: width 0.5s ease;
+    }
+    .back-link {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .back-link a {
+      color: #4a69bd;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .refresh-btn {
+      display: block;
+      margin: 0 auto 1rem;
+      padding: 0.5rem 1.5rem;
+      background: #4a69bd;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .refresh-btn:hover { background: #3b5998; }
+    .empty-msg { text-align: center; color: #888; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Lea Singers</h1>
+    <p>Committee Vote Results</p>
+  </div>
+  <div class="container">
+    <button class="refresh-btn" onclick="loadResults()">Refresh Results</button>
+    <p class="total-voters" id="total-voters"></p>
+    <div class="card" id="chart-card">
+      <div class="chart-container">
+        <canvas id="results-chart"></canvas>
+      </div>
+    </div>
+    <div class="card" id="results-list">
+      <p class="empty-msg">Loading...</p>
+    </div>
+    <div class="back-link">
+      <a href="/">&larr; Back to Voting</a>
+    </div>
+  </div>
+
+  <script>
+    let chart = null;
+    const COLORS = [
+      "#4a69bd", "#6a89dd", "#e15f41", "#f8c291",
+      "#78e08f", "#38ada9", "#b8e994", "#fa983a",
+      "#e55039", "#9b59b6", "#3498db", "#1abc9c",
+    ];
+
+    async function loadResults() {
+      try {
+        const res = await fetch("/api/results");
+        const data = await res.json();
+
+        document.getElementById("total-voters").innerHTML =
+          `<strong>${data.totalVoters}</strong> voter${data.totalVoters !== 1 ? "s" : ""} so far`;
+
+        if (data.results.length === 0) {
+          document.getElementById("results-list").innerHTML =
+            '<p class="empty-msg">No results yet</p>';
+          document.getElementById("chart-card").style.display = "none";
+          return;
+        }
+
+        document.getElementById("chart-card").style.display = "block";
+        const maxVoteCount = Math.max(...data.results.map((r) => r.vote_count), 1);
+
+        // Render chart
+        const ctx = document.getElementById("results-chart").getContext("2d");
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: data.results.map((r) => r.name),
+            datasets: [
+              {
+                label: "Votes",
+                data: data.results.map((r) => r.vote_count),
+                backgroundColor: data.results.map((_, i) => COLORS[i % COLORS.length]),
+                borderRadius: 6,
+                maxBarThickness: 50,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, precision: 0 },
+                grid: { display: false },
+              },
+              y: {
+                grid: { display: false },
+              },
+            },
+          },
+        });
+
+        // Adjust canvas height based on number of nominees
+        const chartContainer = document.querySelector(".chart-container");
+        chartContainer.style.height = Math.max(200, data.results.length * 45) + "px";
+        chart.resize();
+
+        // Render list
+        let listHtml = "";
+        data.results.forEach((r, i) => {
+          const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
+          const pct = maxVoteCount > 0 ? (r.vote_count / maxVoteCount) * 100 : 0;
+          listHtml += `
+            <div class="result-row">
+              <span class="rank ${rankClass}">${i + 1}</span>
+              <span class="name">${escapeHtml(r.name)}</span>
+              <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <span class="votes">${r.vote_count}</span>
+            </div>`;
+        });
+        document.getElementById("results-list").innerHTML = listHtml;
+      } catch {
+        document.getElementById("results-list").innerHTML =
+          '<p class="empty-msg">Could not load results</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    loadResults();
+  </script>
+</body>
+</html>

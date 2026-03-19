@@ -211,6 +211,10 @@
     <div id="login-section" class="card">
       <h2>Admin Login</h2>
       <input type="password" id="password-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()">
+      <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.8rem; font-size:0.9rem; color:#555; cursor:pointer;">
+        <input type="checkbox" id="remember-cb" style="width:18px; height:18px; accent-color:#4a69bd; cursor:pointer;">
+        Remember password on this device
+      </label>
       <button class="btn" onclick="login()">Log In</button>
       <p id="login-error" class="error-msg hidden"></p>
     </div>
@@ -291,6 +295,17 @@
       };
     }
 
+    // Auto-login if password was remembered
+    (function autoLogin() {
+      const saved = localStorage.getItem("admin_password");
+      if (saved) {
+        adminPassword = saved;
+        document.getElementById("password-input").value = saved;
+        document.getElementById("remember-cb").checked = true;
+        login();
+      }
+    })();
+
     async function login() {
       adminPassword = document.getElementById("password-input").value;
       try {
@@ -298,7 +313,14 @@
         if (!res.ok) {
           document.getElementById("login-error").textContent = "Incorrect password";
           document.getElementById("login-error").classList.remove("hidden");
+          localStorage.removeItem("admin_password");
           return;
+        }
+        // Save or clear password based on checkbox
+        if (document.getElementById("remember-cb").checked) {
+          localStorage.setItem("admin_password", adminPassword);
+        } else {
+          localStorage.removeItem("admin_password");
         }
         document.getElementById("login-section").classList.add("hidden");
         document.getElementById("admin-content").classList.remove("hidden");

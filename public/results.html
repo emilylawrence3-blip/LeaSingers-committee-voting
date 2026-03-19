@@ -159,7 +159,10 @@
     <p>Committee Vote Results</p>
   </div>
   <div class="container">
-    <button class="refresh-btn" onclick="loadResults()">Refresh Results</button>
+    <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1rem;">
+      <button class="refresh-btn" onclick="loadResults()" style="margin:0;">Refresh Now</button>
+      <span id="auto-refresh-label" style="font-size:0.8rem; color:#888;">Auto-refreshes every 10s</span>
+    </div>
     <div id="content">
       <p class="empty-msg">Loading...</p>
     </div>
@@ -301,6 +304,8 @@
     }
 
     loadResults();
+    // Auto-refresh every 10 seconds so you can watch votes come in live
+    setInterval(loadResults, 10000);
   </script>
 </body>
 </html>

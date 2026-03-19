@@ -46,7 +46,7 @@ db.exec(`
     FOREIGN KEY (position_id) REFERENCES positions(id)
   );
   INSERT OR IGNORE INTO settings (key, value) VALUES ('voting_open', 'true');
-  INSERT OR IGNORE INTO settings (key, value) VALUES ('results_public', 'false');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('results_public', 'true');
 `);
 
 // Seed default positions if empty

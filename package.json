@@ -1,14 +1,14 @@
 {
   "name": "lea-singers-voting",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "LeaSingers Committee Voting - Multi-position questionnaire style",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.7.0",
     "cookie-parser": "^1.4.7",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "pg": "^8.13.0"
   }
 }

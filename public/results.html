@@ -20,7 +20,6 @@
       padding: 1.5rem 1rem;
     }
     .header img { height: 40px; margin-bottom: 0.3rem; }
-    .header h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
     .header p { opacity: 0.9; font-size: 0.9rem; }
     .container {
       max-width: 600px;
@@ -34,94 +33,102 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       margin-bottom: 1rem;
     }
-
-    .position-section {
-      margin-bottom: 1.5rem;
-    }
-    .position-header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
     .position-title {
       font-size: 1.2rem;
       font-weight: 700;
       color: #ED1C24;
+      margin-bottom: 0.2rem;
+    }
+    .nominee-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.8rem;
     }
     .voter-count {
       font-size: 0.8rem;
       color: #888;
+      float: right;
     }
-    .winner-banner {
-      background: linear-gradient(135deg, #27ae60, #2ecc71);
-      color: white;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      margin-bottom: 0.8rem;
+    .vote-bars {
+      margin-bottom: 0.5rem;
+    }
+    .vote-bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .vote-bar-label {
+      width: 65px;
+      font-size: 0.9rem;
       font-weight: 600;
-      text-align: center;
-    }
-    .winner-banner .label { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
-    .winner-banner .name { font-size: 1.1rem; }
-
-    .result-row {
-      display: flex;
-      align-items: center;
-      padding: 0.6rem 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .result-row:last-child { border-bottom: none; }
-    .result-row .rank {
-      width: 26px;
-      height: 26px;
-      background: #ED1C24;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-      margin-right: 10px;
       flex-shrink: 0;
     }
-    .result-row .rank.gold { background: #f1c40f; color: #333; }
-    .result-row .rank.silver { background: #95a5a6; }
-    .result-row .rank.bronze { background: #cd6133; }
-    .result-row .name { flex-shrink: 0; font-size: 0.95rem; min-width: 80px; }
-    .bar-bg {
+    .vote-bar-label.yes { color: #27ae60; }
+    .vote-bar-label.no { color: #e74c3c; }
+    .vote-bar-label.abstain { color: #999; }
+    .vote-bar-bg {
       flex: 1;
-      margin: 0 10px;
       background: #f0f2f5;
       border-radius: 6px;
-      height: 10px;
+      height: 24px;
       overflow: hidden;
+      margin: 0 10px;
     }
-    .bar-fill {
+    .vote-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #ED1C24, #f5696e);
       border-radius: 6px;
       transition: width 0.5s ease;
-    }
-    .result-row .votes {
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: #ED1C24;
+      color: white;
+      min-width: 0;
+    }
+    .vote-bar-fill.yes { background: #27ae60; }
+    .vote-bar-fill.no { background: #e74c3c; }
+    .vote-bar-fill.abstain { background: #bbb; }
+    .vote-bar-count {
+      font-weight: 700;
       font-size: 1rem;
-      min-width: 35px;
+      min-width: 30px;
       text-align: right;
     }
-    .no-vote-row {
-      color: #aaa;
-      font-size: 0.85rem;
-      padding: 0.3rem 0;
-      text-align: right;
-    }
+    .vote-bar-count.yes { color: #27ae60; }
+    .vote-bar-count.no { color: #e74c3c; }
+    .vote-bar-count.abstain { color: #999; }
 
     .chart-container {
       position: relative;
       width: 100%;
-      margin-bottom: 1rem;
+      height: 120px;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: 0.5rem;
+    }
+    .result-badge.passed {
+      background: #eafaf1;
+      color: #27ae60;
+      border: 1px solid #27ae60;
+    }
+    .result-badge.not-passed {
+      background: #fdecea;
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+    }
+    .result-badge.no-votes {
+      background: #f0f0f0;
+      color: #888;
+      border: 1px solid #ccc;
     }
 
     .refresh-btn {
@@ -169,7 +176,7 @@
   <div class="container">
     <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-bottom:1rem;">
       <button class="refresh-btn" onclick="loadResults()" style="margin:0;">Refresh Now</button>
-      <span id="auto-refresh-label" style="font-size:0.8rem; color:#888;">Auto-refreshes every 10s</span>
+      <span style="font-size:0.8rem; color:#888;">Auto-refreshes every 10s</span>
     </div>
     <div id="content">
       <p class="empty-msg">Loading...</p>
@@ -181,11 +188,6 @@
   </div>
 
   <script>
-    const COLORS = [
-      "#ED1C24", "#c0392b", "#e74c3c", "#f5696e",
-      "#d35400", "#e67e22", "#f39c12", "#8B0000",
-      "#a93226", "#cb4335", "#ec7063", "#b03a2e",
-    ];
     let charts = {};
 
     async function loadResults() {
@@ -204,68 +206,78 @@
         const data = await res.json();
 
         if (data.results.length === 0) {
-          document.getElementById("content").innerHTML = '<p class="empty-msg">No results yet</p>';
+          document.getElementById("content").innerHTML = '<p class="empty-msg">No positions set up yet</p>';
           return;
         }
 
         let html = "";
 
         for (const r of data.results) {
-          html += '<div class="position-section">';
-          html += `<div class="card">`;
+          if (!r.nominee_name) continue; // skip positions without nominees
 
-          // Position header
-          html += `<div class="position-header-bar">`;
-          html += `<span class="position-title">${escapeHtml(r.position.name)}</span>`;
-          html += `<span class="voter-count">${r.totalVoters} voter${r.totalVoters !== 1 ? "s" : ""}</span>`;
-          html += `</div>`;
+          html += '<div class="card">';
+          html += `<span class="voter-count">${r.totalVoters} vote${r.totalVoters !== 1 ? "s" : ""} cast</span>`;
+          html += `<div class="position-title">${escapeHtml(r.position.name)}</div>`;
+          html += `<div class="nominee-name">Nominee: ${escapeHtml(r.nominee_name)}</div>`;
 
-          // Declared winners
-          if (r.winners && r.winners.length > 0) {
-            for (const w of r.winners) {
-              html += `<div class="winner-banner">
-                <div class="label">Elected</div>
-                <div class="name">${escapeHtml(w.nominee_name)}</div>
-              </div>`;
-            }
-          }
+          if (r.totalVoters === 0) {
+            html += '<p class="empty-msg" style="padding:0.5rem;">No votes yet</p>';
+            html += '<span class="result-badge no-votes">Awaiting votes</span>';
+          } else {
+            const total = r.yes + r.no + r.abstain;
+            const yesPct = total > 0 ? (r.yes / total * 100) : 0;
+            const noPct = total > 0 ? (r.no / total * 100) : 0;
+            const abstainPct = total > 0 ? (r.abstain / total * 100) : 0;
 
-          if (r.nominees.length > 0) {
             // Chart
             const chartId = `chart-${r.position.id}`;
-            html += `<div class="chart-container" style="height:${Math.max(120, r.nominees.length * 40)}px;">
+            html += `<div class="chart-container">
               <canvas id="${chartId}"></canvas>
             </div>`;
 
-            // Result rows
-            const maxVotes = Math.max(...r.nominees.map((n) => n.votes), 1);
-            r.nominees.forEach((n, i) => {
-              const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
-              const pct = (n.votes / maxVotes) * 100;
-              html += `<div class="result-row">
-                <span class="rank ${rankClass}">${i + 1}</span>
-                <span class="name">${escapeHtml(n.name)}</span>
-                <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-                <span class="votes">${n.votes}</span>
-              </div>`;
-            });
+            // Vote bars
+            html += '<div class="vote-bars">';
+            html += `<div class="vote-bar-row">
+              <span class="vote-bar-label yes">Yes</span>
+              <div class="vote-bar-bg"><div class="vote-bar-fill yes" style="width:${yesPct}%"></div></div>
+              <span class="vote-bar-count yes">${r.yes}</span>
+            </div>`;
+            html += `<div class="vote-bar-row">
+              <span class="vote-bar-label no">No</span>
+              <div class="vote-bar-bg"><div class="vote-bar-fill no" style="width:${noPct}%"></div></div>
+              <span class="vote-bar-count no">${r.no}</span>
+            </div>`;
+            html += `<div class="vote-bar-row">
+              <span class="vote-bar-label abstain">Abstain</span>
+              <div class="vote-bar-bg"><div class="vote-bar-fill abstain" style="width:${abstainPct}%"></div></div>
+              <span class="vote-bar-count abstain">${r.abstain}</span>
+            </div>`;
+            html += '</div>';
 
-            // No votes
-            if (r.noVotes > 0) {
-              html += `<div class="no-vote-row">"No vote": ${r.noVotes}</div>`;
+            // Pass/fail badge
+            const yesVotes = r.yes;
+            const noVotes = r.no;
+            if (yesVotes > noVotes) {
+              html += '<span class="result-badge passed">Confidence vote passed</span>';
+            } else if (noVotes > yesVotes) {
+              html += '<span class="result-badge not-passed">Confidence vote not passed</span>';
+            } else {
+              html += '<span class="result-badge no-votes">Tied</span>';
             }
-          } else {
-            html += '<p class="empty-msg" style="padding:1rem;">No nominees for this position</p>';
           }
 
-          html += `</div></div>`;
+          html += '</div>';
+        }
+
+        if (!html) {
+          html = '<p class="empty-msg">No nominees have been assigned yet</p>';
         }
 
         document.getElementById("content").innerHTML = html;
 
-        // Render charts
+        // Render pie charts
         for (const r of data.results) {
-          if (r.nominees.length === 0) continue;
+          if (!r.nominee_name || r.totalVoters === 0) continue;
           const chartId = `chart-${r.position.id}`;
           const ctx = document.getElementById(chartId);
           if (!ctx) continue;
@@ -273,29 +285,29 @@
           if (charts[chartId]) charts[chartId].destroy();
 
           charts[chartId] = new Chart(ctx.getContext("2d"), {
-            type: "bar",
+            type: "doughnut",
             data: {
-              labels: r.nominees.map((n) => n.name),
+              labels: ["Yes", "No", "Abstain"],
               datasets: [{
-                label: "Votes",
-                data: r.nominees.map((n) => n.votes),
-                backgroundColor: r.nominees.map((_, i) => COLORS[i % COLORS.length]),
-                borderRadius: 6,
-                maxBarThickness: 40,
+                data: [r.yes, r.no, r.abstain],
+                backgroundColor: ["#27ae60", "#e74c3c", "#bbb"],
+                borderWidth: 2,
+                borderColor: "#fff",
               }],
             },
             options: {
-              indexAxis: "y",
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                x: {
-                  beginAtZero: true,
-                  ticks: { stepSize: 1, precision: 0 },
-                  grid: { display: false },
+              plugins: {
+                legend: {
+                  position: "right",
+                  labels: {
+                    usePointStyle: true,
+                    pointStyle: "circle",
+                    padding: 15,
+                    font: { size: 13, weight: "600" },
+                  },
                 },
-                y: { grid: { display: false } },
               },
             },
           });
@@ -313,7 +325,6 @@
     }
 
     loadResults();
-    // Auto-refresh every 10 seconds so you can watch votes come in live
     setInterval(loadResults, 10000);
   </script>
 </body>

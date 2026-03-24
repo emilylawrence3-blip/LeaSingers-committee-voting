@@ -8,13 +8,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "LeaSingers2026";
 
-// PostgreSQL connection — uses DATABASE_URL from Render environment
+// PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
-// Helper to run queries
 async function query(text, params) {
   const result = await pool.query(text, params);
   return result.rows;
@@ -31,18 +30,12 @@ async function initDB() {
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       display_order INTEGER NOT NULL,
-      max_winners INTEGER NOT NULL DEFAULT 1
-    );
-    CREATE TABLE IF NOT EXISTS nominees (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      position_id INTEGER NOT NULL REFERENCES positions(id),
-      UNIQUE(name, position_id)
+      nominee_name TEXT DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS votes (
       id SERIAL PRIMARY KEY,
       position_id INTEGER NOT NULL REFERENCES positions(id),
-      nominee_id INTEGER REFERENCES nominees(id),
+      vote_type TEXT NOT NULL CHECK (vote_type IN ('yes', 'no', 'abstain')),
       voter_token TEXT NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
@@ -50,12 +43,17 @@ async function initDB() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
-    CREATE TABLE IF NOT EXISTS winners (
-      id SERIAL PRIMARY KEY,
-      position_id INTEGER NOT NULL REFERENCES positions(id),
-      nominee_name TEXT NOT NULL
-    );
   `);
+
+  // Add nominee_name column if it doesn't exist (migration)
+  try {
+    await pool.query("ALTER TABLE positions ADD COLUMN IF NOT EXISTS nominee_name TEXT DEFAULT ''");
+  } catch (e) { /* already exists */ }
+
+  // Add vote_type column if it doesn't exist (migration from old schema)
+  try {
+    await pool.query("ALTER TABLE votes ADD COLUMN IF NOT EXISTS vote_type TEXT DEFAULT 'yes'");
+  } catch (e) { /* already exists */ }
 
   // Seed default settings
   await pool.query(`
@@ -70,10 +68,10 @@ async function initDB() {
   // Seed default positions if empty
   const posCount = await queryOne("SELECT COUNT(*) as c FROM positions");
   if (parseInt(posCount.c) === 0) {
-    await pool.query("INSERT INTO positions (name, display_order, max_winners) VALUES ($1, $2, $3)", ["Chair", 1, 1]);
-    await pool.query("INSERT INTO positions (name, display_order, max_winners) VALUES ($1, $2, $3)", ["Treasurer", 2, 1]);
-    await pool.query("INSERT INTO positions (name, display_order, max_winners) VALUES ($1, $2, $3)", ["Secretary", 3, 1]);
-    await pool.query("INSERT INTO positions (name, display_order, max_winners) VALUES ($1, $2, $3)", ["Other Committee Member", 4, 4]);
+    await pool.query("INSERT INTO positions (name, display_order, nominee_name) VALUES ($1, $2, $3)", ["Chair", 1, ""]);
+    await pool.query("INSERT INTO positions (name, display_order, nominee_name) VALUES ($1, $2, $3)", ["Treasurer", 2, ""]);
+    await pool.query("INSERT INTO positions (name, display_order, nominee_name) VALUES ($1, $2, $3)", ["Secretary", 3, ""]);
+    await pool.query("INSERT INTO positions (name, display_order, nominee_name) VALUES ($1, $2, $3)", ["Other Committee Member", 4, ""]);
   }
 
   console.log("Database initialized successfully");
@@ -82,7 +80,7 @@ async function initDB() {
 app.use(express.json());
 app.use(cookieParser());
 
-// Prevent browser caching of HTML pages so updates are always seen
+// Prevent browser caching of HTML pages
 app.use((req, res, next) => {
   if (req.path.endsWith('.html') || req.path === '/' || req.path === '/admin' || req.path === '/results') {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -93,7 +91,6 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, "public")));
 
-// Assign each visitor a unique anonymous token via cookie
 function getVoterToken(req, res) {
   let token = req.cookies.voter_token;
   if (!token) {
@@ -107,7 +104,6 @@ function getVoterToken(req, res) {
   return token;
 }
 
-// Simple admin auth check
 function requireAdmin(req, res, next) {
   const password = req.headers["x-admin-password"] || req.query.password;
   if (password !== ADMIN_PASSWORD) {
@@ -118,7 +114,7 @@ function requireAdmin(req, res, next) {
 
 // --- Public API ---
 
-// Get all positions with their nominees
+// Get all positions for voting
 app.get("/api/positions", async (req, res) => {
   try {
     const positions = await query("SELECT * FROM positions ORDER BY display_order");
@@ -126,30 +122,21 @@ app.get("/api/positions", async (req, res) => {
     const votingOpen = await queryOne("SELECT value FROM settings WHERE key = 'voting_open'");
 
     // Get what this voter has already voted for
-    const existingVotes = await query("SELECT position_id, nominee_id FROM votes WHERE voter_token = $1", [token]);
+    const existingVotes = await query("SELECT position_id FROM votes WHERE voter_token = $1", [token]);
     const votedPositions = new Set(existingVotes.map((v) => v.position_id));
 
-    // Get winners (people already elected to a position)
-    const winners = await query("SELECT * FROM winners");
-    const winnerNames = new Set(winners.map((w) => w.nominee_name.toLowerCase()));
-
-    const result = [];
-    for (const pos of positions) {
-      let nominees = await query("SELECT id, name FROM nominees WHERE position_id = $1 ORDER BY name", [pos.id]);
-      // Filter out winners of previous positions
-      nominees = nominees.filter((n) => !winnerNames.has(n.name.toLowerCase()));
-
-      result.push({
-        ...pos,
-        nominees,
-        hasVoted: votedPositions.has(pos.id),
-      });
-    }
+    const result = positions
+      .filter((p) => p.nominee_name && p.nominee_name.trim() !== "") // Only show positions with a nominee
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        nominee_name: p.nominee_name,
+        hasVoted: votedPositions.has(p.id),
+      }));
 
     res.json({
       positions: result,
       votingOpen: votingOpen?.value === "true",
-      winners,
     });
   } catch (err) {
     console.error("Error fetching positions:", err);
@@ -157,7 +144,7 @@ app.get("/api/positions", async (req, res) => {
   }
 });
 
-// Cast vote(s) for a specific position
+// Cast a vote of confidence for a position
 app.post("/api/vote/:positionId", async (req, res) => {
   try {
     const votingOpen = await queryOne("SELECT value FROM settings WHERE key = 'voting_open'");
@@ -167,28 +154,19 @@ app.post("/api/vote/:positionId", async (req, res) => {
 
     const token = getVoterToken(req, res);
     const positionId = parseInt(req.params.positionId);
+    const { voteType } = req.body;
 
-    // Accept multiple formats
-    let nomineeIds;
-    if (Array.isArray(req.body.nomineeIds)) {
-      nomineeIds = req.body.nomineeIds;
-    } else if (typeof req.body.nomineeIds === "number") {
-      nomineeIds = [req.body.nomineeIds];
-    } else if (req.body.nomineeId !== undefined) {
-      nomineeIds = req.body.nomineeId != null ? [req.body.nomineeId] : [];
-    } else if (req.body.nomineeIds !== undefined && req.body.nomineeIds === null) {
-      nomineeIds = [];
-    } else {
-      nomineeIds = [];
+    if (!["yes", "no", "abstain"].includes(voteType)) {
+      return res.status(400).json({ error: "Vote must be yes, no, or abstain" });
     }
 
-    // Check position exists
+    // Check position exists and has a nominee
     const position = await queryOne("SELECT * FROM positions WHERE id = $1", [positionId]);
-    if (!position) {
+    if (!position || !position.nominee_name || position.nominee_name.trim() === "") {
       return res.status(404).json({ error: "Position not found" });
     }
 
-    // Check if already voted for this position
+    // Check if already voted
     const existing = await queryOne(
       "SELECT COUNT(*) as count FROM votes WHERE voter_token = $1 AND position_id = $2",
       [token, positionId]
@@ -197,47 +175,12 @@ app.post("/api/vote/:positionId", async (req, res) => {
       return res.status(403).json({ error: "You have already voted for this position" });
     }
 
-    if (nomineeIds.length > position.max_winners) {
-      return res.status(400).json({ error: `You can select up to ${position.max_winners} nominees` });
-    }
+    await pool.query(
+      "INSERT INTO votes (position_id, vote_type, voter_token) VALUES ($1, $2, $3)",
+      [positionId, voteType, token]
+    );
 
-    // Validate all nominees
-    for (const nid of nomineeIds) {
-      const nominee = await queryOne(
-        "SELECT * FROM nominees WHERE id = $1 AND position_id = $2",
-        [nid, positionId]
-      );
-      if (!nominee) {
-        return res.status(400).json({ error: "Invalid nominee for this position" });
-      }
-    }
-
-    // Insert votes in a transaction
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      if (nomineeIds.length === 0) {
-        // "No vote" — record one row with null nominee
-        await client.query(
-          "INSERT INTO votes (position_id, nominee_id, voter_token) VALUES ($1, $2, $3)",
-          [positionId, null, token]
-        );
-      } else {
-        for (const nid of nomineeIds) {
-          await client.query(
-            "INSERT INTO votes (position_id, nominee_id, voter_token) VALUES ($1, $2, $3)",
-            [positionId, nid, token]
-          );
-        }
-      }
-      await client.query("COMMIT");
-      res.json({ success: true });
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
-    }
+    res.json({ success: true });
   } catch (err) {
     console.error("Error casting vote:", err);
     res.status(500).json({ error: "Failed to record vote" });
@@ -255,42 +198,45 @@ app.get("/api/results", async (req, res) => {
     }
 
     const positions = await query("SELECT * FROM positions ORDER BY display_order");
-    const winners = await query("SELECT * FROM winners");
 
     const results = [];
     for (const pos of positions) {
-      const nominees = await query("SELECT id, name FROM nominees WHERE position_id = $1 ORDER BY name", [pos.id]);
-
-      const voteCounts = [];
-      for (const n of nominees) {
-        const count = await queryOne(
-          "SELECT COUNT(*) as c FROM votes WHERE position_id = $1 AND nominee_id = $2",
-          [pos.id, n.id]
-        );
-        voteCounts.push({ ...n, votes: parseInt(count.c) });
+      if (!pos.nominee_name || pos.nominee_name.trim() === "") {
+        results.push({
+          position: pos,
+          nominee_name: "",
+          yes: 0,
+          no: 0,
+          abstain: 0,
+          totalVoters: 0,
+        });
+        continue;
       }
 
-      // Sort by votes descending
-      voteCounts.sort((a, b) => b.votes - a.votes);
-
-      const noVoteCount = await queryOne(
-        "SELECT COUNT(*) as c FROM votes WHERE position_id = $1 AND nominee_id IS NULL",
+      const yesCount = await queryOne(
+        "SELECT COUNT(*) as c FROM votes WHERE position_id = $1 AND vote_type = 'yes'",
         [pos.id]
       );
-
+      const noCount = await queryOne(
+        "SELECT COUNT(*) as c FROM votes WHERE position_id = $1 AND vote_type = 'no'",
+        [pos.id]
+      );
+      const abstainCount = await queryOne(
+        "SELECT COUNT(*) as c FROM votes WHERE position_id = $1 AND vote_type = 'abstain'",
+        [pos.id]
+      );
       const totalVoters = await queryOne(
         "SELECT COUNT(DISTINCT voter_token) as c FROM votes WHERE position_id = $1",
         [pos.id]
       );
 
-      const posWinners = winners.filter((w) => w.position_id === pos.id);
-
       results.push({
         position: pos,
-        nominees: voteCounts,
-        noVotes: parseInt(noVoteCount.c),
+        nominee_name: pos.nominee_name,
+        yes: parseInt(yesCount.c),
+        no: parseInt(noCount.c),
+        abstain: parseInt(abstainCount.c),
         totalVoters: parseInt(totalVoters.c),
-        winners: posWinners,
       });
     }
 
@@ -303,48 +249,22 @@ app.get("/api/results", async (req, res) => {
 
 // --- Admin API ---
 
-// Get all positions with nominees (admin view)
+// Get all positions (admin view)
 app.get("/api/admin/positions", requireAdmin, async (req, res) => {
   try {
     const positions = await query("SELECT * FROM positions ORDER BY display_order");
-    const result = [];
-    for (const pos of positions) {
-      const nominees = await query("SELECT id, name FROM nominees WHERE position_id = $1 ORDER BY name", [pos.id]);
-      result.push({ ...pos, nominees });
-    }
-    res.json({ positions: result });
+    res.json({ positions });
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Add a nominee to a position
-app.post("/api/admin/nominees", requireAdmin, async (req, res) => {
-  const { name, positionId } = req.body;
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: "Name is required" });
-  }
-  if (!positionId) {
-    return res.status(400).json({ error: "Position is required" });
-  }
+// Update nominee name for a position
+app.post("/api/admin/positions/:id/nominee", requireAdmin, async (req, res) => {
+  const { nomineeName } = req.body;
   try {
-    await pool.query("INSERT INTO nominees (name, position_id) VALUES ($1, $2)", [name.trim(), positionId]);
-    res.json({ success: true });
-  } catch (err) {
-    if (err.code === "23505") { // unique_violation
-      return res.status(400).json({ error: "This person is already nominated for this position" });
-    }
-    console.error("Error:", err);
-    res.status(500).json({ error: "Failed to add nominee" });
-  }
-});
-
-// Remove a nominee
-app.delete("/api/admin/nominees/:id", requireAdmin, async (req, res) => {
-  try {
-    await pool.query("DELETE FROM votes WHERE nominee_id = $1", [req.params.id]);
-    await pool.query("DELETE FROM nominees WHERE id = $1", [req.params.id]);
+    await pool.query("UPDATE positions SET nominee_name = $1 WHERE id = $2", [nomineeName || "", req.params.id]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error:", err);
@@ -354,15 +274,15 @@ app.delete("/api/admin/nominees/:id", requireAdmin, async (req, res) => {
 
 // Add a position
 app.post("/api/admin/positions", requireAdmin, async (req, res) => {
-  const { name, maxWinners } = req.body;
+  const { name } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: "Name is required" });
   }
   try {
     const maxOrder = await queryOne("SELECT COALESCE(MAX(display_order), 0) as m FROM positions");
     await pool.query(
-      "INSERT INTO positions (name, display_order, max_winners) VALUES ($1, $2, $3)",
-      [name.trim(), parseInt(maxOrder.m) + 1, maxWinners || 1]
+      "INSERT INTO positions (name, display_order, nominee_name) VALUES ($1, $2, $3)",
+      [name.trim(), parseInt(maxOrder.m) + 1, ""]
     );
     res.json({ success: true });
   } catch (err) {
@@ -374,11 +294,8 @@ app.post("/api/admin/positions", requireAdmin, async (req, res) => {
 // Delete a position
 app.delete("/api/admin/positions/:id", requireAdmin, async (req, res) => {
   try {
-    const posId = req.params.id;
-    await pool.query("DELETE FROM votes WHERE position_id = $1", [posId]);
-    await pool.query("DELETE FROM nominees WHERE position_id = $1", [posId]);
-    await pool.query("DELETE FROM winners WHERE position_id = $1", [posId]);
-    await pool.query("DELETE FROM positions WHERE id = $1", [posId]);
+    await pool.query("DELETE FROM votes WHERE position_id = $1", [req.params.id]);
+    await pool.query("DELETE FROM positions WHERE id = $1", [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error:", err);
@@ -424,37 +341,10 @@ app.get("/api/admin/settings", requireAdmin, async (req, res) => {
   }
 });
 
-// Set a winner for a position
-app.post("/api/admin/winners", requireAdmin, async (req, res) => {
-  const { positionId, nomineeName } = req.body;
-  if (!positionId || !nomineeName) {
-    return res.status(400).json({ error: "Position and nominee name are required" });
-  }
-  try {
-    await pool.query("INSERT INTO winners (position_id, nominee_name) VALUES ($1, $2)", [positionId, nomineeName]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ error: "Failed to set winner" });
-  }
-});
-
-// Remove a winner
-app.delete("/api/admin/winners/:id", requireAdmin, async (req, res) => {
-  try {
-    await pool.query("DELETE FROM winners WHERE id = $1", [req.params.id]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 // Reset all votes
 app.post("/api/admin/reset-votes", requireAdmin, async (req, res) => {
   try {
     await pool.query("DELETE FROM votes");
-    await pool.query("DELETE FROM winners");
     res.json({ success: true });
   } catch (err) {
     console.error("Error:", err);
@@ -466,8 +356,7 @@ app.post("/api/admin/reset-votes", requireAdmin, async (req, res) => {
 app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   try {
     const totalVoters = await queryOne("SELECT COUNT(DISTINCT voter_token) as count FROM votes");
-    const totalVotes = await queryOne("SELECT COUNT(*) as count FROM votes");
-    res.json({ totalVoters: parseInt(totalVoters.count), totalVotes: parseInt(totalVotes.count) });
+    res.json({ totalVoters: parseInt(totalVoters.count) });
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ error: "Server error" });
@@ -482,13 +371,11 @@ app.get("/results", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "results.html"));
 });
 
-// Start server after DB is ready
+// Start server
 initDB()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Lea Singers Voting is running at http://localhost:${PORT}`);
-      console.log(`Admin page: http://localhost:${PORT}/admin`);
-      console.log(`Results page: http://localhost:${PORT}/results`);
     });
   })
   .catch((err) => {

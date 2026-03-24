@@ -34,8 +34,7 @@
       margin-bottom: 1rem;
     }
     .card h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #333; }
-    .card h3 { font-size: 1rem; margin-bottom: 0.8rem; color: #ED1C24; }
-    input[type="text"], input[type="password"], input[type="number"], select {
+    input[type="text"], input[type="password"] {
       width: 100%;
       padding: 0.8rem;
       border: 2px solid #e0e0e0;
@@ -43,7 +42,7 @@
       font-size: 1rem;
       margin-bottom: 0.8rem;
     }
-    input:focus, select:focus {
+    input:focus {
       outline: none;
       border-color: #ED1C24;
     }
@@ -62,25 +61,12 @@
     .btn:hover { background: #c9171e; }
     .btn-danger { background: #8B0000; }
     .btn-danger:hover { background: #6B0000; }
-    .btn-success { background: #27ae60; }
-    .btn-success:hover { background: #219a52; }
-    .btn-warning { background: #f39c12; }
-    .btn-warning:hover { background: #e67e22; }
     .btn-sm {
       width: auto;
       padding: 0.3rem 0.7rem;
       font-size: 0.8rem;
       display: inline-block;
     }
-    .nominee-list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .nominee-list-item:last-child { border-bottom: none; }
-    .nominee-list-item .name { font-size: 0.95rem; }
     .toggle-row {
       display: flex;
       justify-content: space-between;
@@ -144,7 +130,6 @@
     .stat-box .number { font-size: 1.8rem; font-weight: 700; color: #ED1C24; }
     .stat-box .label { font-size: 0.8rem; color: #888; }
     .error-msg { color: #e74c3c; font-size: 0.9rem; margin-bottom: 0.5rem; }
-    .success-msg-text { color: #27ae60; font-size: 0.9rem; margin-bottom: 0.5rem; }
     .links { margin-top: 0.5rem; }
     .links a { color: #ED1C24; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-right: 1rem; }
     .hidden { display: none; }
@@ -160,54 +145,27 @@
     }
     .position-title h3 {
       margin: 0;
+      color: #ED1C24;
+      font-size: 1rem;
     }
-    .position-meta {
-      font-size: 0.75rem;
-      color: #888;
-      margin-bottom: 0.8rem;
-    }
-    .add-nominee-row {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-    .add-nominee-row input {
-      flex: 1;
-      margin-bottom: 0;
-    }
-    .add-nominee-row button {
-      white-space: nowrap;
-    }
-    .winner-badge {
-      display: inline-block;
-      background: #27ae60;
-      color: white;
-      font-size: 0.7rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 10px;
-      margin-left: 0.5rem;
-      font-weight: 600;
-    }
-    .winner-controls {
-      margin-top: 0.8rem;
-      padding-top: 0.8rem;
-      border-top: 1px solid #f0f0f0;
-    }
-    .winner-controls label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #555;
-      display: block;
-      margin-bottom: 0.3rem;
-    }
-    .winner-row {
+    .nominee-row {
       display: flex;
       gap: 0.5rem;
       align-items: center;
     }
-    .winner-row select {
+    .nominee-row input {
       flex: 1;
       margin-bottom: 0;
+    }
+    .nominee-row button {
+      white-space: nowrap;
+    }
+    .nominee-saved {
+      font-size: 0.8rem;
+      color: #27ae60;
+      font-weight: 600;
+      margin-top: 0.3rem;
+      min-height: 1.2em;
     }
     .section-divider {
       border: none;
@@ -234,14 +192,14 @@
       <p id="login-error" class="error-msg hidden"></p>
     </div>
 
-    <!-- Admin content (hidden until login) -->
+    <!-- Admin content -->
     <div id="admin-content" class="hidden">
       <!-- Stats -->
       <div class="card">
         <div class="stats">
           <div class="stat-box">
             <div class="number" id="voter-count">0</div>
-            <div class="label">Total Votes Cast</div>
+            <div class="label">Total Voters</div>
           </div>
         </div>
         <div class="links">
@@ -256,8 +214,8 @@
         <div class="toggle-row">
           <span>Voting Open</span>
           <div style="display:flex; align-items:center;">
-            <label class="switch" onclick="toggleSetting('voting')">
-              <input type="checkbox" id="voting-toggle">
+            <label class="switch">
+              <input type="checkbox" id="voting-toggle" onchange="saveSetting('voting')">
               <span class="slider"></span>
             </label>
             <span class="toggle-status" id="voting-status"></span>
@@ -266,8 +224,8 @@
         <div class="toggle-row">
           <span>Results Visible to Public</span>
           <div style="display:flex; align-items:center;">
-            <label class="switch" onclick="toggleSetting('results')">
-              <input type="checkbox" id="results-toggle">
+            <label class="switch">
+              <input type="checkbox" id="results-toggle" onchange="saveSetting('results')">
               <span class="slider"></span>
             </label>
             <span class="toggle-status" id="results-status"></span>
@@ -280,8 +238,7 @@
       <div class="card">
         <h2>Positions &amp; Nominees</h2>
         <p style="font-size:0.85rem; color:#888; margin-bottom:1rem;">
-          Add nominees against each position below. Once voting finishes for a position, declare a winner —
-          they will be automatically excluded from nominees for all remaining positions.
+          Enter the nominee name for each position. Voters will choose Yes / No / Abstain for each.
         </p>
         <div id="positions-list">
           <p style="color:#888; text-align:center;">Loading...</p>
@@ -289,20 +246,16 @@
 
         <hr class="section-divider">
 
-        <h3>Add a New Position</h3>
+        <h3 style="color:#ED1C24; margin-bottom:0.5rem;">Add a New Position</h3>
         <input type="text" id="new-position-name" placeholder="Position name (e.g. Social Secretary)">
-        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.8rem;">
-          <label style="white-space:nowrap; font-size:0.9rem;">Winners:</label>
-          <input type="number" id="new-position-winners" min="1" value="1" style="width:80px; margin-bottom:0;">
-        </div>
         <button class="btn" onclick="addPosition()">Add Position</button>
       </div>
 
       <!-- Danger Zone -->
       <div class="card">
         <h2 style="color:#8B0000">Danger Zone</h2>
-        <button class="btn btn-danger" onclick="resetVotes()" style="margin-bottom:0.5rem;">Reset All Votes &amp; Winners</button>
-        <p style="font-size:0.8rem; color:#888;">This will delete all recorded votes and declared winners, but keep positions and nominees.</p>
+        <button class="btn btn-danger" onclick="resetVotes()" style="margin-bottom:0.5rem;">Reset All Votes</button>
+        <p style="font-size:0.8rem; color:#888;">This will delete all recorded votes but keep positions and nominees.</p>
       </div>
     </div>
   </div>
@@ -338,7 +291,6 @@
           localStorage.removeItem("admin_password");
           return;
         }
-        // Save or clear password based on checkbox
         if (document.getElementById("remember-cb").checked) {
           localStorage.setItem("admin_password", adminPassword);
         } else {
@@ -353,8 +305,6 @@
       }
     }
 
-    let savingSettings = false;
-
     async function loadData() {
       const [posRes, statRes, settingsRes] = await Promise.all([
         fetch("/api/admin/positions", { headers: headers() }),
@@ -367,19 +317,11 @@
 
       document.getElementById("voter-count").textContent = statData.totalVoters;
 
-      // Update toggles
       document.getElementById("voting-toggle").checked = settingsData.votingOpen;
       document.getElementById("results-toggle").checked = settingsData.resultsPublic;
       updateStatusLabels();
 
-      // Get winners
-      const winnersRes = await fetch(`/api/results?password=${encodeURIComponent(adminPassword)}`);
-      let winnersData = { results: [] };
-      if (winnersRes.ok) {
-        winnersData = await winnersRes.json();
-      }
-
-      renderPositions(posData.positions, winnersData.results);
+      renderPositions(posData.positions);
     }
 
     function updateStatusLabels() {
@@ -393,7 +335,7 @@
       rs.className = "toggle-status " + (resultsOn ? "on" : "off");
     }
 
-    function renderPositions(positions, resultsData) {
+    function renderPositions(positions) {
       const list = document.getElementById("positions-list");
       if (positions.length === 0) {
         list.innerHTML = '<p style="color:#888; text-align:center;">No positions set up yet</p>';
@@ -402,106 +344,51 @@
 
       let html = "";
       for (const pos of positions) {
-        const resultInfo = resultsData.find((r) => r.position.id === pos.id);
-        const posWinners = resultInfo ? resultInfo.winners : [];
-
         html += `<div class="card position-card">`;
         html += `<div class="position-title">`;
         html += `<h3>${escapeHtml(pos.name)}</h3>`;
         html += `<button class="btn btn-danger btn-sm" onclick="deletePosition(${pos.id})">Delete</button>`;
         html += `</div>`;
-        html += `<div class="position-meta">Elects ${pos.max_winners} winner${pos.max_winners > 1 ? "s" : ""}</div>`;
-
-        // Show declared winners
-        if (posWinners.length > 0) {
-          for (const w of posWinners) {
-            html += `<div class="nominee-list-item">
-              <span class="name">${escapeHtml(w.nominee_name)}<span class="winner-badge">ELECTED</span></span>
-              <button class="btn btn-danger btn-sm" onclick="removeWinner(${w.id})">Remove</button>
-            </div>`;
-          }
-        }
-
-        // Nominees
-        if (pos.nominees.length > 0) {
-          for (const n of pos.nominees) {
-            const isWinner = posWinners.some((w) => w.nominee_name.toLowerCase() === n.name.toLowerCase());
-            html += `<div class="nominee-list-item">
-              <span class="name">${escapeHtml(n.name)}${isWinner ? '<span class="winner-badge">ELECTED</span>' : ""}</span>
-              <button class="btn btn-danger btn-sm" onclick="removeNominee(${n.id})">Remove</button>
-            </div>`;
-          }
-        } else {
-          html += '<p style="color:#aaa; font-size:0.85rem; padding:0.3rem 0;">No nominees yet</p>';
-        }
-
-        // Add nominee input
-        html += `<div class="add-nominee-row">
-          <input type="text" id="add-nom-${pos.id}" placeholder="Add nominee name" onkeydown="if(event.key==='Enter')addNominee(${pos.id})">
-          <button class="btn btn-success btn-sm" onclick="addNominee(${pos.id})">Add</button>
-        </div>`;
-
-        // Declare winner section
-        if (pos.nominees.length > 0) {
-          html += `<div class="winner-controls">
-            <label>Declare winner(s) for ${escapeHtml(pos.name)}:</label>
-            <div class="winner-row">
-              <select id="winner-select-${pos.id}">
-                <option value="">-- Select nominee --</option>`;
-          for (const n of pos.nominees) {
-            const alreadyWinner = posWinners.some((w) => w.nominee_name.toLowerCase() === n.name.toLowerCase());
-            if (!alreadyWinner) {
-              html += `<option value="${escapeHtml(n.name)}">${escapeHtml(n.name)}</option>`;
-            }
-          }
-          html += `</select>
-              <button class="btn btn-warning btn-sm" onclick="declareWinner(${pos.id})">Declare</button>
-            </div>
-          </div>`;
-        }
-
+        html += `<div class="nominee-row">`;
+        html += `<input type="text" id="nominee-${pos.id}" placeholder="Enter nominee name" value="${escapeAttr(pos.nominee_name || "")}" onkeydown="if(event.key==='Enter')saveNominee(${pos.id})">`;
+        html += `<button class="btn btn-sm" onclick="saveNominee(${pos.id})">Save</button>`;
+        html += `</div>`;
+        html += `<div class="nominee-saved" id="saved-${pos.id}"></div>`;
         html += `</div>`;
       }
       list.innerHTML = html;
     }
 
-    async function addNominee(positionId) {
-      const input = document.getElementById(`add-nom-${positionId}`);
-      const name = input.value.trim();
-      if (!name) return;
+    async function saveNominee(positionId) {
+      const input = document.getElementById(`nominee-${positionId}`);
+      const nomineeName = input.value.trim();
+      const feedback = document.getElementById(`saved-${positionId}`);
 
-      const res = await fetch("/api/admin/nominees", {
+      const res = await fetch(`/api/admin/positions/${positionId}/nominee`, {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ name, positionId }),
+        body: JSON.stringify({ nomineeName }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error);
-        return;
-      }
-      input.value = "";
-      loadData();
-    }
 
-    async function removeNominee(id) {
-      if (!confirm("Remove this nominee? Their votes will also be deleted.")) return;
-      await fetch(`/api/admin/nominees/${id}`, {
-        method: "DELETE",
-        headers: headers(),
-      });
-      loadData();
+      if (res.ok) {
+        feedback.textContent = nomineeName ? `Saved: ${nomineeName}` : "Nominee cleared";
+        feedback.style.color = "#27ae60";
+        setTimeout(() => { feedback.textContent = ""; }, 3000);
+      } else {
+        const data = await res.json();
+        feedback.textContent = "Error: " + (data.error || "Failed to save");
+        feedback.style.color = "#e74c3c";
+      }
     }
 
     async function addPosition() {
       const name = document.getElementById("new-position-name").value.trim();
-      const maxWinners = parseInt(document.getElementById("new-position-winners").value) || 1;
       if (!name) return;
 
       const res = await fetch("/api/admin/positions", {
         method: "POST",
         headers: headers(),
-        body: JSON.stringify({ name, maxWinners }),
+        body: JSON.stringify({ name }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -509,12 +396,11 @@
         return;
       }
       document.getElementById("new-position-name").value = "";
-      document.getElementById("new-position-winners").value = "1";
       loadData();
     }
 
     async function deletePosition(id) {
-      if (!confirm("Delete this position and all its nominees and votes?")) return;
+      if (!confirm("Delete this position and all its votes?")) return;
       await fetch(`/api/admin/positions/${id}`, {
         method: "DELETE",
         headers: headers(),
@@ -522,40 +408,7 @@
       loadData();
     }
 
-    async function declareWinner(positionId) {
-      const select = document.getElementById(`winner-select-${positionId}`);
-      const nomineeName = select.value;
-      if (!nomineeName) return;
-
-      const res = await fetch("/api/admin/winners", {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ positionId, nomineeName }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error);
-        return;
-      }
-      loadData();
-    }
-
-    async function removeWinner(id) {
-      if (!confirm("Remove this declared winner?")) return;
-      await fetch(`/api/admin/winners/${id}`, {
-        method: "DELETE",
-        headers: headers(),
-      });
-      loadData();
-    }
-
-    async function toggleSetting(which) {
-      if (savingSettings) return;
-      savingSettings = true;
-
-      // Small delay to let the checkbox state update from the click
-      await new Promise(r => setTimeout(r, 50));
-
+    async function saveSetting(which) {
       const votingOpen = document.getElementById("voting-toggle").checked;
       const resultsPublic = document.getElementById("results-toggle").checked;
       const feedback = document.getElementById("settings-feedback");
@@ -573,7 +426,7 @@
           const data = await res.json();
           feedback.textContent = "Failed: " + (data.error || "Unknown error");
           feedback.style.color = "#e74c3c";
-          // Revert toggles by re-fetching actual state
+          // Revert by re-fetching
           const sRes = await fetch("/api/admin/settings", { headers: headers() });
           const sData = await sRes.json();
           document.getElementById("voting-toggle").checked = sData.votingOpen;
@@ -588,12 +441,11 @@
         feedback.textContent = "Network error — could not save.";
         feedback.style.color = "#e74c3c";
       }
-      savingSettings = false;
     }
 
     async function resetVotes() {
-      if (!confirm("Delete ALL votes and declared winners? This cannot be undone.")) return;
-      if (!confirm("Really delete everything?")) return;
+      if (!confirm("Delete ALL votes? This cannot be undone.")) return;
+      if (!confirm("Really delete all votes?")) return;
       await fetch("/api/admin/reset-votes", {
         method: "POST",
         headers: headers(),
@@ -605,6 +457,9 @@
       const div = document.createElement("div");
       div.textContent = str;
       return div.innerHTML;
+    }
+    function escapeAttr(str) {
+      return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
   </script>
 </body>

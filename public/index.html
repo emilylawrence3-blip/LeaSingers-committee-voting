@@ -19,7 +19,6 @@
       padding: 1.5rem 1rem 1.2rem;
     }
     .header img { height: 50px; margin-bottom: 0.4rem; }
-    .header h1 { font-size: 1.4rem; margin-bottom: 0.2rem; }
     .header p { opacity: 0.9; font-size: 0.95rem; }
     .container {
       max-width: 500px;
@@ -67,17 +66,23 @@
       font-weight: 700;
       color: #ED1C24;
     }
-    .position-info {
-      font-size: 0.85rem;
-      color: #888;
-      margin-top: 0.3rem;
+    .nominee-display {
+      font-size: 1.15rem;
+      color: #333;
+      margin-top: 0.5rem;
+      font-weight: 600;
+    }
+    .confidence-prompt {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 0.6rem;
     }
 
-    /* Nominee options */
-    .nominee-option {
+    /* Vote options */
+    .vote-option {
       display: flex;
       align-items: center;
-      padding: 1rem 0.8rem;
+      padding: 1rem 1.2rem;
       border: 2px solid #e8e8e8;
       border-radius: 10px;
       margin-bottom: 0.6rem;
@@ -85,19 +90,18 @@
       transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .nominee-option:hover { border-color: #f5a0a3; background: #fef5f5; }
-    .nominee-option.selected {
-      border-color: #ED1C24;
-      background: #fde8e9;
+    .vote-option:hover { border-color: #ccc; background: #fafafa; }
+    .vote-option.selected-yes {
+      border-color: #27ae60;
+      background: #eafaf1;
     }
-    .nominee-option.no-vote-option {
-      border-style: dashed;
-      color: #888;
+    .vote-option.selected-no {
+      border-color: #e74c3c;
+      background: #fdecea;
     }
-    .nominee-option.no-vote-option.selected {
+    .vote-option.selected-abstain {
       border-color: #999;
       background: #f0f0f0;
-      border-style: solid;
     }
     .radio-circle {
       width: 24px;
@@ -111,11 +115,15 @@
       justify-content: center;
       transition: all 0.15s;
     }
-    .nominee-option.selected .radio-circle {
-      border-color: #ED1C24;
-      background: #ED1C24;
+    .vote-option.selected-yes .radio-circle {
+      border-color: #27ae60;
+      background: #27ae60;
     }
-    .nominee-option.no-vote-option.selected .radio-circle {
+    .vote-option.selected-no .radio-circle {
+      border-color: #e74c3c;
+      background: #e74c3c;
+    }
+    .vote-option.selected-abstain .radio-circle {
       border-color: #999;
       background: #999;
     }
@@ -127,37 +135,14 @@
       border-radius: 50%;
       display: none;
     }
-    .nominee-option.selected .radio-circle::after { display: block; }
-    .nominee-label {
-      font-size: 1.05rem;
-      flex: 1;
+    .vote-option[class*="selected-"] .radio-circle::after { display: block; }
+    .vote-label {
+      font-size: 1.1rem;
+      font-weight: 600;
     }
-
-    /* For multi-select (committee members) */
-    .check-box {
-      width: 24px;
-      height: 24px;
-      border: 2px solid #ccc;
-      border-radius: 6px;
-      margin-right: 12px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-    .nominee-option.selected .check-box {
-      border-color: #ED1C24;
-      background: #ED1C24;
-    }
-    .check-box::after {
-      content: "\2713";
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      display: none;
-    }
-    .nominee-option.selected .check-box::after { display: block; }
+    .vote-option.selected-yes .vote-label { color: #27ae60; }
+    .vote-option.selected-no .vote-label { color: #e74c3c; }
+    .vote-option.selected-abstain .vote-label { color: #666; }
 
     .btn {
       display: block;
@@ -175,13 +160,6 @@
     }
     .btn:hover { background: #c9171e; }
     .btn:disabled { background: #ccc; cursor: not-allowed; }
-    .btn-secondary {
-      background: transparent;
-      color: #ED1C24;
-      border: 2px solid #ED1C24;
-      margin-top: 0.5rem;
-    }
-    .btn-secondary:hover { background: #fef5f5; }
 
     .error-banner {
       background: #fde8e8;
@@ -217,18 +195,12 @@
       color: #aaa;
       font-size: 0.8rem;
     }
-    .selection-hint {
-      text-align: center;
-      font-size: 0.85rem;
-      color: #888;
-      margin-top: 0.5rem;
-    }
   </style>
 </head>
 <body>
   <div class="header">
     <img src="/logo.png" alt="Lea Singers" onerror="this.style.display='none'">
-    <p>Committee Election Vote</p>
+    <p>Committee Election - Vote of Confidence</p>
   </div>
   <div class="container">
     <div id="error-banner" class="error-banner"></div>
@@ -241,25 +213,28 @@
   <script>
     let positions = [];
     let currentStep = 0;
-    let selectedPerPosition = {}; // positionId -> nomineeId (single) or Set of ids (multi)
-    let votingOpen = false;
+    let selectedVote = {}; // positionId -> 'yes' | 'no' | 'abstain'
 
     async function init() {
       try {
         const res = await fetch("/api/positions");
         const data = await res.json();
         positions = data.positions;
-        votingOpen = data.votingOpen;
 
-        if (!votingOpen) {
+        if (!data.votingOpen) {
           showClosed();
           return;
         }
 
-        // Find the first position they haven't voted for yet
-        const firstUnvoted = positions.findIndex((p) => !p.hasVoted && p.nominees.length > 0);
+        if (positions.length === 0) {
+          document.getElementById("content").innerHTML =
+            '<div class="card closed-msg"><h2>No Positions</h2><p>No positions have been set up for voting yet.</p></div>';
+          return;
+        }
+
+        // Find first unvoted position
+        const firstUnvoted = positions.findIndex((p) => !p.hasVoted);
         if (firstUnvoted === -1) {
-          // All voted
           showAllDone();
           return;
         }
@@ -279,21 +254,16 @@
         return;
       }
 
-      // Skip if already voted
       if (pos.hasVoted) {
         currentStep++;
-        renderStep();
+        if (currentStep >= positions.length) {
+          showAllDone();
+        } else {
+          renderStep();
+        }
         return;
       }
 
-      // Skip if no nominees available (all won other positions)
-      if (pos.nominees.length === 0) {
-        currentStep++;
-        renderStep();
-        return;
-      }
-
-      const isMulti = pos.max_winners > 1;
       const content = document.getElementById("content");
 
       // Progress bar
@@ -304,40 +274,28 @@
       }
       progressHtml += "</div>";
 
-      // Position header
       let html = progressHtml;
       html += '<div class="position-header">';
       html += `<div class="position-label">Position ${currentStep + 1} of ${positions.length}</div>`;
       html += `<div class="position-name">${escapeHtml(pos.name)}</div>`;
-      if (isMulti) {
-        html += `<div class="position-info">Select up to ${pos.max_winners} candidates (or choose no vote)</div>`;
-      } else {
-        html += '<div class="position-info">Select one candidate</div>';
-      }
+      html += `<div class="nominee-display">Nominee: ${escapeHtml(pos.nominee_name)}</div>`;
+      html += `<div class="confidence-prompt">Do you support this nominee for ${escapeHtml(pos.name)}?</div>`;
       html += "</div>";
 
-      // Nominees
       html += '<div class="card">';
-      for (const n of pos.nominees) {
-        const indicator = isMulti ? '<div class="check-box"></div>' : '<div class="radio-circle"></div>';
-        html += `<div class="nominee-option" data-id="${n.id}" onclick="selectNominee(${pos.id}, ${n.id}, ${isMulti}, this)">
-          ${indicator}
-          <span class="nominee-label">${escapeHtml(n.name)}</span>
-        </div>`;
-      }
-
-      // No vote option
-      const noVoteIndicator = isMulti ? '<div class="check-box"></div>' : '<div class="radio-circle"></div>';
-      html += `<div class="nominee-option no-vote-option" data-id="none" onclick="selectNoVote(${pos.id}, ${isMulti}, this)">
-        ${noVoteIndicator}
-        <span class="nominee-label">No vote</span>
+      html += `<div class="vote-option" onclick="selectVote(${pos.id}, 'yes', this)">
+        <div class="radio-circle"></div>
+        <span class="vote-label">Yes</span>
       </div>`;
-
+      html += `<div class="vote-option" onclick="selectVote(${pos.id}, 'no', this)">
+        <div class="radio-circle"></div>
+        <span class="vote-label">No</span>
+      </div>`;
+      html += `<div class="vote-option" onclick="selectVote(${pos.id}, 'abstain', this)">
+        <div class="radio-circle"></div>
+        <span class="vote-label">Abstain</span>
+      </div>`;
       html += "</div>";
-
-      if (isMulti) {
-        html += '<p class="selection-hint" id="selection-hint">0 selected</p>';
-      }
 
       html += `<button class="btn" id="next-btn" onclick="submitAndNext()" disabled>
         ${currentStep < positions.length - 1 ? "Next \u2192" : "Submit Vote"}
@@ -347,84 +305,29 @@
       hideError();
     }
 
-    function selectNominee(positionId, nomineeId, isMulti, el) {
-      const pos = positions.find((p) => p.id === positionId);
-
-      if (isMulti) {
-        // Multi-select: toggle this nominee
-        if (!selectedPerPosition[positionId] || selectedPerPosition[positionId] === "none") {
-          selectedPerPosition[positionId] = new Set();
-          document.querySelectorAll(".nominee-option").forEach((e) => e.classList.remove("selected"));
-        }
-
-        const current = selectedPerPosition[positionId];
-        if (current instanceof Set) {
-          if (current.has(nomineeId)) {
-            current.delete(nomineeId);
-            el.classList.remove("selected");
-          } else {
-            if (current.size >= pos.max_winners) {
-              showError(`You can select up to ${pos.max_winners} candidates`);
-              return;
-            }
-            current.add(nomineeId);
-            el.classList.add("selected");
-            // Deselect "no vote"
-            const noVoteEl = document.querySelector('.no-vote-option');
-            if (noVoteEl) noVoteEl.classList.remove("selected");
-          }
-
-          const hint = document.getElementById("selection-hint");
-          if (hint) hint.textContent = `${current.size} selected`;
-          document.getElementById("next-btn").disabled = current.size === 0;
-        }
-      } else {
-        // Single select: radio behavior
-        document.querySelectorAll(".nominee-option").forEach((e) => e.classList.remove("selected"));
-        el.classList.add("selected");
-        selectedPerPosition[positionId] = nomineeId;
-        document.getElementById("next-btn").disabled = false;
-      }
-      hideError();
-    }
-
-    function selectNoVote(positionId, isMulti, el) {
+    function selectVote(positionId, voteType, el) {
       // Clear all selections
-      document.querySelectorAll(".nominee-option").forEach((e) => e.classList.remove("selected"));
-      el.classList.add("selected");
-      selectedPerPosition[positionId] = "none";
+      document.querySelectorAll(".vote-option").forEach((e) => {
+        e.classList.remove("selected-yes", "selected-no", "selected-abstain");
+      });
+      el.classList.add(`selected-${voteType}`);
+      selectedVote[positionId] = voteType;
       document.getElementById("next-btn").disabled = false;
-
-      if (isMulti) {
-        const hint = document.getElementById("selection-hint");
-        if (hint) hint.textContent = "No vote selected";
-      }
+      hideError();
     }
 
     async function submitAndNext() {
       const pos = positions[currentStep];
-      const selection = selectedPerPosition[pos.id];
+      const voteType = selectedVote[pos.id];
       const btn = document.getElementById("next-btn");
       btn.disabled = true;
       btn.textContent = "Submitting...";
 
       try {
-        // Build the array of nominee IDs to send in one request
-        let nomineeIds = [];
-        if (selection === "none" || selection === undefined || selection === null) {
-          nomineeIds = []; // empty array = "no vote"
-        } else if (selection instanceof Set) {
-          nomineeIds = [...selection];
-        } else if (typeof selection === "number") {
-          nomineeIds = [selection];
-        } else {
-          nomineeIds = [];
-        }
-
         const res = await fetch(`/api/vote/${pos.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nomineeIds }),
+          body: JSON.stringify({ voteType }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -434,12 +337,11 @@
           return;
         }
 
-        // Mark as voted
         pos.hasVoted = true;
-
-        // Move to next unvoted position
         currentStep++;
-        while (currentStep < positions.length && (positions[currentStep].hasVoted || positions[currentStep].nominees.length === 0)) {
+
+        // Skip already voted
+        while (currentStep < positions.length && positions[currentStep].hasVoted) {
           currentStep++;
         }
 
@@ -459,7 +361,7 @@
       document.getElementById("content").innerHTML = `
         <div class="card success-msg">
           <h2>Thank you!</h2>
-          <p>Your votes have been recorded for all positions.</p>
+          <p>Your votes have been recorded.</p>
           <p style="font-size:0.85rem; color:#999; margin-top:0.5rem;">Your vote is completely anonymous.</p>
           <a href="/results">View Results \u2192</a>
         </div>`;

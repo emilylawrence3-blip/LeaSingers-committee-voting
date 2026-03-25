@@ -363,6 +363,11 @@ app.get("/api/admin/stats", requireAdmin, async (req, res) => {
   }
 });
 
+// Health check endpoint (for keep-alive pings)
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
+});
+
 // Serve pages
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
